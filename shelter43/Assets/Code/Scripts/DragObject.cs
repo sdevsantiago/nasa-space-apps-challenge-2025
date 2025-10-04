@@ -26,8 +26,11 @@ public class DragObject : MonoBehaviour
     Vector3 _dragOffset;
     Plane _dragPlane;
     Rigidbody _rigidbody;
+    Collider _collider;
     bool _isDragging;
     Vector3 _targetPosition;
+    float _baseLockedY;
+    bool _baseHeightInitialized;
 
     RigidbodyConstraints _originalConstraints;
     bool _originalUseGravity;
@@ -49,6 +52,7 @@ public class DragObject : MonoBehaviour
             dragCamera = Camera.main;
 
         _rigidbody = GetComponent<Rigidbody>();
+        _collider = GetComponent<Collider>();
         CacheOriginalState();
         ConfigureRigidbody();
         SetIdleMode(true);
@@ -68,6 +72,12 @@ public class DragObject : MonoBehaviour
 
         _dragPlane = new Plane(Vector3.up, new Vector3(0f, lockedY, 0f));
         _targetPosition = _rigidbody.position;
+
+        if (!_baseHeightInitialized)
+        {
+            _baseLockedY = lockedY;
+            _baseHeightInitialized = true;
+        }
     }
 
     void OnDestroy()
@@ -88,6 +98,12 @@ public class DragObject : MonoBehaviour
     {
         if (!ValidateCamera() || _rigidbody == null)
             return;
+
+        if (transform.parent != null && transform.parent.CompareTag("Module"))
+        {
+            transform.SetParent(null, true);
+            RestoreBaseHeight();
+        }
 
         SetIdleMode(false);
         ResetVelocities();
@@ -187,7 +203,19 @@ public class DragObject : MonoBehaviour
         if (collision.contactCount == 0)
             return;
 
-        Vector3 normal = collision.GetContact(0).normal;
+        ContactPoint contact = collision.GetContact(0);
+        DragObject targetModule = collision.collider.GetComponentInParent<DragObject>();
+        if (targetModule != null && targetModule != this && !targetModule.transform.IsChildOf(transform))
+        {
+            if (TryStackOnModule(contact, collision.collider, targetModule))
+            {
+                _isDragging = false;
+                SetIdleMode(true);
+                return;
+            }
+        }
+
+        Vector3 normal = contact.normal;
         normal.y = 0f;
         if (normal.sqrMagnitude <= 0.0001f)
             return;
@@ -270,5 +298,73 @@ public class DragObject : MonoBehaviour
     void UpdatePlaneHeight()
     {
         _dragPlane.SetNormalAndPosition(Vector3.up, new Vector3(0f, lockedY, 0f));
+    }
+
+    bool TryStackOnModule(ContactPoint contact, Collider targetCollider, DragObject targetModule)
+    {
+        if (_collider == null || targetCollider == null)
+            return false;
+
+        if (targetModule.transform == transform || targetModule.transform.IsChildOf(transform))
+            return false;
+
+        if (HasModuleChild(targetModule.transform))
+            return false;
+
+        float verticalInfluence = Mathf.Abs(contact.normal.y);
+        if (verticalInfluence > 0.3f)
+            return false;
+
+        Bounds myBounds = _collider.bounds;
+        Bounds targetBounds = targetCollider.bounds;
+
+        float targetY = targetBounds.max.y + myBounds.extents.y;
+        Vector3 basePosition = targetModule.transform.position;
+        Vector3 alignedPosition = new Vector3(basePosition.x, targetY, basePosition.z);
+
+        transform.SetParent(targetModule.transform, true);
+        transform.rotation = targetModule.transform.rotation;
+
+        lockedY = alignedPosition.y;
+        MoveTo(alignedPosition);
+        ResetVelocities();
+
+        return true;
+    }
+
+    bool HasModuleChild(Transform parent)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child == transform)
+                continue;
+
+            if (child.CompareTag("Module"))
+                return true;
+        }
+
+        return false;
+    }
+
+    void RestoreBaseHeight()
+    {
+        if (!_baseHeightInitialized)
+            return;
+
+        lockedY = _baseLockedY;
+        Vector3 current = _rigidbody != null ? _rigidbody.position : transform.position;
+        current.y = lockedY;
+        MoveTo(current);
+    }
+
+    void MoveTo(Vector3 position)
+    {
+        if (_rigidbody != null)
+            _rigidbody.position = position;
+
+        transform.position = position;
+        _targetPosition = position;
+        UpdatePlaneHeight();
     }
 }
