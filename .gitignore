@@ -1,0 +1,44 @@
+# Archivos temporales de Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uilds/
+[Bb]uild/
+[Ll]ogs/
+[Mm]emoryCaptures/
+UserSettings/
+
+# Cache del paquete Package Manager
+[Pp]ackages/com.unity.package-manager-ui/
+
+# Artefactos del editor
+*.pidb
+*.suo
+*.user
+*.unityproj
+*.booproj
+*.svd
+*.pdb.meta
+*.mdb.meta
+
+# Artefactos generados por IDEs
+.vs/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.userprefs
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Crash Reports
+sysinfo.txt
+
+# Builds móviles y WebGL
+*.apk
+*.aab
+*.ipa
+[Bb]uilds/*
