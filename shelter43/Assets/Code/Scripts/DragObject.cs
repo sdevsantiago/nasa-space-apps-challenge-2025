@@ -25,8 +25,8 @@ public class DragObject : MonoBehaviour
     [SerializeField] float stopEpsilon = 0.0004f;
 
     [Header("Stacking")]
-    [SerializeField] float restackCooldown = 0.35f;
-    [SerializeField] float restackSeparation = 0.6f;
+    [SerializeField] float restackCooldown = 0.6f;
+    [SerializeField] float restackSeparation = 1.2f;
 
     Vector3 _dragOffset;
     Plane _dragPlane;
@@ -40,6 +40,10 @@ public class DragObject : MonoBehaviour
     readonly HashSet<Collider> _ignoredParentColliders = new HashSet<Collider>();
     bool _pendingRestoreBaseHeight;
     float _ignoredParentCooldown;
+    Transform _defaultParent;
+    bool _colliderWasTrigger;
+    bool _initialDetectCollisions;
+    float _stackedLocalY;
 
     RigidbodyConstraints _originalConstraints;
     bool _originalUseGravity;
@@ -62,6 +66,8 @@ public class DragObject : MonoBehaviour
 
         _rigidbody = GetComponent<Rigidbody>();
         _collider = GetComponent<Collider>();
+        _colliderWasTrigger = _collider != null && _collider.isTrigger;
+        _initialDetectCollisions = _rigidbody != null && _rigidbody.detectCollisions;
         CacheOriginalState();
         ConfigureRigidbody();
         SetIdleMode(true);
@@ -96,6 +102,9 @@ public class DragObject : MonoBehaviour
             _baseLockedY = lockedY;
             _baseHeightInitialized = true;
         }
+
+        if (_defaultParent == null)
+            _defaultParent = FindNonModuleAncestor(transform.parent);
     }
 
     void OnDestroy()
@@ -118,13 +127,34 @@ public class DragObject : MonoBehaviour
             return;
 
         Transform previousParent = transform.parent;
+        if (previousParent != null && !previousParent.CompareTag("Module"))
+        {
+            _defaultParent = previousParent;
+        }
+
         if (previousParent != null && previousParent.CompareTag("Module"))
         {
             _ignoredStackParent = previousParent;
             _ignoredParentColliders.Clear();
             _pendingRestoreBaseHeight = true;
             _ignoredParentCooldown = restackCooldown;
-            transform.SetParent(null, true);
+            ApplyStackState(false);
+
+            Transform restoreParent = _defaultParent;
+            if (restoreParent == null)
+            {
+                restoreParent = FindNonModuleAncestor(previousParent.parent);
+                if (restoreParent != null)
+                    _defaultParent = restoreParent;
+            }
+            else if (restoreParent.CompareTag("Module"))
+            {
+                restoreParent = FindNonModuleAncestor(restoreParent.parent);
+                if (restoreParent != null)
+                    _defaultParent = restoreParent;
+            }
+
+            transform.SetParent(restoreParent, true);
         }
 
         SetIdleMode(false);
@@ -229,12 +259,13 @@ public class DragObject : MonoBehaviour
 
         ContactPoint contact = collision.GetContact(0);
         DragObject targetModule = collision.collider.GetComponentInParent<DragObject>();
-        if (targetModule != null && targetModule != this && !targetModule.transform.IsChildOf(transform))
+        if (!_pendingRestoreBaseHeight && targetModule != null && targetModule != this && !targetModule.transform.IsChildOf(transform))
         {
             if (!ShouldIgnoreStacking(targetModule.transform) && TryStackOnModule(contact, collision.collider, targetModule))
             {
                 _isDragging = false;
                 SetIdleMode(true);
+                ApplyStackState(true);
                 return;
             }
         }
@@ -342,6 +373,10 @@ public class DragObject : MonoBehaviour
         Bounds myBounds = _collider.bounds;
         Bounds targetBounds = targetCollider.bounds;
 
+        Transform previousParent = transform.parent;
+        if (previousParent != null && !previousParent.CompareTag("Module"))
+            _defaultParent = previousParent;
+
         float targetY = targetBounds.max.y + myBounds.extents.y;
         Vector3 basePosition = targetModule.transform.position;
         Vector3 alignedPosition = new Vector3(basePosition.x, targetY, basePosition.z);
@@ -358,6 +393,7 @@ public class DragObject : MonoBehaviour
         local.z = 0f;
         transform.localPosition = local;
         transform.localRotation = Quaternion.identity;
+        _stackedLocalY = transform.localPosition.y;
 
         ClearIgnoredParentState();
 
@@ -395,6 +431,23 @@ public class DragObject : MonoBehaviour
 
         ClearIgnoredParentState();
         return false;
+    }
+
+    Transform FindNonModuleAncestor(Transform candidate)
+    {
+        while (candidate != null && candidate.CompareTag("Module"))
+            candidate = candidate.parent;
+
+        return candidate;
+    }
+
+    void ApplyStackState(bool stacked)
+    {
+        if (_collider != null)
+            _collider.isTrigger = stacked || _colliderWasTrigger;
+
+        if (_rigidbody != null)
+            _rigidbody.detectCollisions = stacked ? false : _initialDetectCollisions;
     }
 
     void RestoreBaseHeight()
@@ -459,6 +512,21 @@ public class DragObject : MonoBehaviour
 
         if (_ignoredParentColliders.Count == 0)
             RestoreBaseHeight();
+    }
+
+    void LateUpdate()
+    {
+        Transform p = transform.parent;
+        if (p != null && p.CompareTag("Module"))
+        {
+            // Hard lock to parent so there's no lag.
+            Vector3 local = transform.localPosition;
+            local.x = 0f;
+            local.z = 0f;
+            local.y = _stackedLocalY;
+            transform.localPosition = local;
+            transform.localRotation = Quaternion.identity;
+        }
     }
 
     bool HasClearedIgnoredParentDistance()
