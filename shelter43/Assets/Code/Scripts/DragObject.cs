@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Allows dragging any object tagged "Module" across a horizontal plane while keeping Y locked.
-/// Uses a configurable spring-damper force on a Rigidbody for smooth motion and halts instantly on release.
+/// Uses a spring-damper force applied to the object's Rigidbody for smooth motion while preventing runaway impulses.
 /// </summary>
 [RequireComponent(typeof(Collider))]
 [RequireComponent(typeof(Rigidbody))]
@@ -14,9 +14,11 @@ public class DragObject : MonoBehaviour
     [SerializeField] bool useInitialHeight = true;
 
     [Header("Physics")]
-    [SerializeField] float springForce = 320f;
-    [SerializeField] float damping = 48f;
-    [SerializeField] float maxHorizontalSpeed = 40f;
+    [SerializeField] float springForce = 260f;
+    [SerializeField] float damping = 40f;
+    [SerializeField] float maxHorizontalSpeed = 18f;
+    [SerializeField] float maxAcceleration = 70f;
+    [SerializeField] float maxTargetDistance = 20f;
 
     [Header("Tolerance")]
     [SerializeField] float stopEpsilon = 0.0004f;
@@ -146,14 +148,31 @@ public class DragObject : MonoBehaviour
             return;
         }
 
-        Vector3 horizontalVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
+        float maxDistanceSqr = maxTargetDistance * maxTargetDistance;
+        if (delta.sqrMagnitude > maxDistanceSqr)
+        {
+            delta = delta.normalized * maxTargetDistance;
+            planarTarget = planarCurrent + delta;
+            _targetPosition = new Vector3(planarTarget.x, lockedY, planarTarget.z);
+        }
+
+        Vector3 velocity = _rigidbody.linearVelocity;
+        Vector3 horizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
         Vector3 desiredAcceleration = delta * springForce - horizontalVelocity * damping;
         desiredAcceleration.y = 0f;
 
+        float maxAccelSqr = maxAcceleration * maxAcceleration;
+        if (desiredAcceleration.sqrMagnitude > maxAccelSqr)
+            desiredAcceleration = desiredAcceleration.normalized * maxAcceleration;
+
         _rigidbody.AddForce(desiredAcceleration, ForceMode.Acceleration);
 
-        horizontalVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
-        horizontalVelocity = Vector3.ClampMagnitude(horizontalVelocity, maxHorizontalSpeed);
+        velocity = _rigidbody.linearVelocity;
+        horizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
+        float maxSpeedSqr = maxHorizontalSpeed * maxHorizontalSpeed;
+        if (horizontalVelocity.sqrMagnitude > maxSpeedSqr)
+            horizontalVelocity = horizontalVelocity.normalized * maxHorizontalSpeed;
+
         _rigidbody.linearVelocity = new Vector3(horizontalVelocity.x, 0f, horizontalVelocity.z);
     }
 
@@ -170,6 +189,9 @@ public class DragObject : MonoBehaviour
 
         Vector3 normal = collision.GetContact(0).normal;
         normal.y = 0f;
+        if (normal.sqrMagnitude <= 0.0001f)
+            return;
+
         normal.Normalize();
 
         Vector3 velocity = _rigidbody.linearVelocity;
@@ -177,7 +199,12 @@ public class DragObject : MonoBehaviour
         if (into > 0f)
         {
             velocity += normal * into;
-            _rigidbody.linearVelocity = new Vector3(velocity.x, 0f, velocity.z);
+            velocity.y = 0f;
+            float maxSpeedSqr = maxHorizontalSpeed * maxHorizontalSpeed;
+            Vector3 clamped = velocity.sqrMagnitude > maxSpeedSqr
+                ? velocity.normalized * maxHorizontalSpeed
+                : velocity;
+            _rigidbody.linearVelocity = new Vector3(clamped.x, 0f, clamped.z);
         }
     }
 
