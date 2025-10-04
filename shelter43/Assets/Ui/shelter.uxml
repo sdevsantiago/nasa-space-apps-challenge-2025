@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/shelter.uss" />
+    <ui:VisualElement name="app" class="app">
+
+        <!-- Top bar -->
+        <ui:VisualElement name="topbar" class="topbar">
+            <ui:Button name="menuBtn" text="☰ Home" class="menu-btn" />
+            <ui:Button name="btnMissionDesigner" text="Mission Designer" class="top-btn" />
+            <ui:Button name="btnObjectEdition" text="Object Editor" class="top-btn" />
+            <ui:Button name="btnMissionExporter" text="Mission Exporter" class="top-btn" />
+        </ui:VisualElement>
+
+        <!-- Main content -->
+        <ui:VisualElement name="content" class="content">
+            <ui:Label text="Welcome to Shelter 43 UI System" class="welcome-text" />
+        </ui:VisualElement>
+
+        <!-- Popup for data entry -->
+        <ui:VisualElement name="popup" class="popup" style="display: none;">
+            <ui:Label name="popup-title" text="Fill in the data:" class="popup-title" />
+            <ui:DropdownField name="missionType" label="Mission Type" choices="Planetary,Space" />
+            <ui:DropdownField name="duration" label="Duration" choices="Less than 30 days,Between 30 and 180 days,More than 180 days" />
+            <ui:IntegerField name="crewSize" label="Crew Size" value="2" />
+            <ui:VisualElement class="popup-actions" style="flex-direction: row; gap: 8px; justify-content: flex-end;">
+                <ui:Button name="popupApply" text="Apply" class="popup-apply" />
+                <ui:Button name="popupClose" text="Close" class="popup-close" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>
