@@ -1,10 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// Allows dragging an object across a horizontal plane while keeping Y locked.
-/// Uses Rigidbody forces for smooth motion and stops instantly when released.
+/// Allows dragging any object tagged "Module" across a horizontal plane while keeping Y locked.
+/// Uses a configurable spring-damper force on a Rigidbody for smooth motion and halts instantly on release.
 /// </summary>
 [RequireComponent(typeof(Collider))]
+[RequireComponent(typeof(Rigidbody))]
 public class DragObject : MonoBehaviour
 {
     [Header("Dragging")]
@@ -13,34 +14,49 @@ public class DragObject : MonoBehaviour
     [SerializeField] bool useInitialHeight = true;
 
     [Header("Physics")]
-    [SerializeField] Rigidbody targetBody;
-    [SerializeField] float springForce = 120f;
-    [SerializeField] float damping = 24f;
-    [SerializeField] float maxHorizontalSpeed = 10f;
+    [SerializeField] float springForce = 320f;
+    [SerializeField] float damping = 48f;
+    [SerializeField] float maxHorizontalSpeed = 40f;
+
+    [Header("Tolerance")]
+    [SerializeField] float stopEpsilon = 0.0004f;
 
     Vector3 _dragOffset;
     Plane _dragPlane;
     Rigidbody _rigidbody;
     bool _isDragging;
     Vector3 _targetPosition;
+
     RigidbodyConstraints _originalConstraints;
+    bool _originalUseGravity;
+    bool _originalIsKinematic;
+    float _originalDrag;
+    float _originalAngularDrag;
+    RigidbodyInterpolation _originalInterpolation;
+    CollisionDetectionMode _originalCollisionDetection;
 
     void Awake()
     {
+        if (!CompareTag("Module"))
+        {
+            enabled = false;
+            return;
+        }
+
         if (dragCamera == null)
             dragCamera = Camera.main;
 
-        _rigidbody = targetBody != null ? targetBody : GetComponent<Rigidbody>();
-        if (_rigidbody == null)
-        {
-            _rigidbody = gameObject.AddComponent<Rigidbody>();
-        }
-
+        _rigidbody = GetComponent<Rigidbody>();
+        CacheOriginalState();
         ConfigureRigidbody();
+        SetIdleMode(true);
     }
 
     void Start()
     {
+        if (_rigidbody == null)
+            return;
+
         if (useInitialHeight)
             lockedY = _rigidbody.position.y;
 
@@ -54,16 +70,25 @@ public class DragObject : MonoBehaviour
 
     void OnDestroy()
     {
-        if (_rigidbody != null)
-        {
-            _rigidbody.constraints = _originalConstraints;
-        }
+        if (_rigidbody == null)
+            return;
+
+        _rigidbody.constraints = _originalConstraints;
+        _rigidbody.useGravity = _originalUseGravity;
+        _rigidbody.isKinematic = _originalIsKinematic;
+        _rigidbody.linearDamping = _originalDrag;
+        _rigidbody.angularDamping = _originalAngularDrag;
+        _rigidbody.interpolation = _originalInterpolation;
+        _rigidbody.collisionDetectionMode = _originalCollisionDetection;
     }
 
     void OnMouseDown()
     {
-        if (!ValidateCamera())
+        if (!ValidateCamera() || _rigidbody == null)
             return;
+
+        SetIdleMode(false);
+        ResetVelocities();
 
         UpdatePlaneHeight();
 
@@ -76,13 +101,12 @@ public class DragObject : MonoBehaviour
             _dragOffset.y = 0f;
             _targetPosition = currentPosition;
             _isDragging = true;
-            ResetVelocities();
         }
     }
 
     void OnMouseDrag()
     {
-        if (!_isDragging || !ValidateCamera())
+        if (!_isDragging || !ValidateCamera() || _rigidbody == null)
             return;
 
         UpdatePlaneHeight();
@@ -102,12 +126,12 @@ public class DragObject : MonoBehaviour
             return;
 
         _isDragging = false;
-        ResetVelocities();
+        SetIdleMode(true);
     }
 
     void FixedUpdate()
     {
-        if (!_isDragging)
+        if (!_isDragging || _rigidbody == null || _rigidbody.isKinematic)
             return;
 
         Vector3 current = _rigidbody.position;
@@ -115,7 +139,7 @@ public class DragObject : MonoBehaviour
         Vector3 planarTarget = new Vector3(_targetPosition.x, lockedY, _targetPosition.z);
         Vector3 delta = planarTarget - planarCurrent;
 
-        if (delta.sqrMagnitude <= 0.0001f)
+        if (delta.sqrMagnitude <= stopEpsilon)
         {
             _rigidbody.position = planarTarget;
             ResetVelocities();
@@ -124,8 +148,8 @@ public class DragObject : MonoBehaviour
 
         Vector3 horizontalVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
         Vector3 desiredAcceleration = delta * springForce - horizontalVelocity * damping;
-
         desiredAcceleration.y = 0f;
+
         _rigidbody.AddForce(desiredAcceleration, ForceMode.Acceleration);
 
         horizontalVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
@@ -133,18 +157,76 @@ public class DragObject : MonoBehaviour
         _rigidbody.linearVelocity = new Vector3(horizontalVelocity.x, 0f, horizontalVelocity.z);
     }
 
-    void ConfigureRigidbody()
+    void OnCollisionStay(Collision collision)
+    {
+        if (!_isDragging || _rigidbody == null)
+            return;
+
+        if (!collision.collider.CompareTag("Module"))
+            return;
+
+        if (collision.contactCount == 0)
+            return;
+
+        Vector3 normal = collision.GetContact(0).normal;
+        normal.y = 0f;
+        normal.Normalize();
+
+        Vector3 velocity = _rigidbody.linearVelocity;
+        float into = Vector3.Dot(velocity, -normal);
+        if (into > 0f)
+        {
+            velocity += normal * into;
+            _rigidbody.linearVelocity = new Vector3(velocity.x, 0f, velocity.z);
+        }
+    }
+
+    void CacheOriginalState()
     {
         _originalConstraints = _rigidbody.constraints;
+        _originalUseGravity = _rigidbody.useGravity;
+        _originalIsKinematic = _rigidbody.isKinematic;
+        _originalDrag = _rigidbody.linearDamping;
+        _originalAngularDrag = _rigidbody.angularDamping;
+        _originalInterpolation = _rigidbody.interpolation;
+        _originalCollisionDetection = _rigidbody.collisionDetectionMode;
+    }
+
+    void ConfigureRigidbody()
+    {
         _rigidbody.useGravity = false;
+        _rigidbody.isKinematic = false;
         _rigidbody.linearDamping = 0f;
         _rigidbody.angularDamping = 0.05f;
         _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-        _rigidbody.constraints = _originalConstraints | RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+        _rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+    }
+
+    void SetIdleMode(bool idle)
+    {
+        if (_rigidbody == null)
+            return;
+
+        if (idle)
+        {
+            ResetVelocities();
+            _rigidbody.isKinematic = true;
+            _rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+            _targetPosition = _rigidbody.position;
+        }
+        else
+        {
+            _rigidbody.isKinematic = false;
+            _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+        }
     }
 
     void ResetVelocities()
     {
+        if (_rigidbody == null)
+            return;
+
         _rigidbody.linearVelocity = Vector3.zero;
         _rigidbody.angularVelocity = Vector3.zero;
     }
