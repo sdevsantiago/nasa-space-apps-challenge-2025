@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -23,6 +24,10 @@ public class DragObject : MonoBehaviour
     [Header("Tolerance")]
     [SerializeField] float stopEpsilon = 0.0004f;
 
+    [Header("Stacking")]
+    [SerializeField] float restackCooldown = 0.35f;
+    [SerializeField] float restackSeparation = 0.6f;
+
     Vector3 _dragOffset;
     Plane _dragPlane;
     Rigidbody _rigidbody;
@@ -31,6 +36,10 @@ public class DragObject : MonoBehaviour
     Vector3 _targetPosition;
     float _baseLockedY;
     bool _baseHeightInitialized;
+    Transform _ignoredStackParent;
+    readonly HashSet<Collider> _ignoredParentColliders = new HashSet<Collider>();
+    bool _pendingRestoreBaseHeight;
+    float _ignoredParentCooldown;
 
     RigidbodyConstraints _originalConstraints;
     bool _originalUseGravity;
@@ -56,6 +65,15 @@ public class DragObject : MonoBehaviour
         CacheOriginalState();
         ConfigureRigidbody();
         SetIdleMode(true);
+    }
+
+    void OnValidate()
+    {
+        if (restackCooldown < 0f)
+            restackCooldown = 0f;
+
+        if (restackSeparation < 0f)
+            restackSeparation = 0f;
     }
 
     void Start()
@@ -99,10 +117,14 @@ public class DragObject : MonoBehaviour
         if (!ValidateCamera() || _rigidbody == null)
             return;
 
-        if (transform.parent != null && transform.parent.CompareTag("Module"))
+        Transform previousParent = transform.parent;
+        if (previousParent != null && previousParent.CompareTag("Module"))
         {
+            _ignoredStackParent = previousParent;
+            _ignoredParentColliders.Clear();
+            _pendingRestoreBaseHeight = true;
+            _ignoredParentCooldown = restackCooldown;
             transform.SetParent(null, true);
-            RestoreBaseHeight();
         }
 
         SetIdleMode(false);
@@ -203,11 +225,13 @@ public class DragObject : MonoBehaviour
         if (collision.contactCount == 0)
             return;
 
+        TrackIgnoredParentContact(collision);
+
         ContactPoint contact = collision.GetContact(0);
         DragObject targetModule = collision.collider.GetComponentInParent<DragObject>();
         if (targetModule != null && targetModule != this && !targetModule.transform.IsChildOf(transform))
         {
-            if (TryStackOnModule(contact, collision.collider, targetModule))
+            if (!ShouldIgnoreStacking(targetModule.transform) && TryStackOnModule(contact, collision.collider, targetModule))
             {
                 _isDragging = false;
                 SetIdleMode(true);
@@ -329,6 +353,14 @@ public class DragObject : MonoBehaviour
         MoveTo(alignedPosition);
         ResetVelocities();
 
+        Vector3 local = transform.localPosition;
+        local.x = 0f;
+        local.z = 0f;
+        transform.localPosition = local;
+        transform.localRotation = Quaternion.identity;
+
+        ClearIgnoredParentState();
+
         return true;
     }
 
@@ -347,6 +379,24 @@ public class DragObject : MonoBehaviour
         return false;
     }
 
+    bool ShouldIgnoreStacking(Transform candidate)
+    {
+        if (_ignoredStackParent == null || candidate != _ignoredStackParent)
+            return false;
+
+        if (_pendingRestoreBaseHeight)
+            return true;
+
+        if (_ignoredParentCooldown > 0f)
+            return true;
+
+        if (!HasClearedIgnoredParentDistance())
+            return true;
+
+        ClearIgnoredParentState();
+        return false;
+    }
+
     void RestoreBaseHeight()
     {
         if (!_baseHeightInitialized)
@@ -356,6 +406,9 @@ public class DragObject : MonoBehaviour
         Vector3 current = _rigidbody != null ? _rigidbody.position : transform.position;
         current.y = lockedY;
         MoveTo(current);
+
+        _pendingRestoreBaseHeight = false;
+        _ignoredParentColliders.Clear();
     }
 
     void MoveTo(Vector3 position)
@@ -366,5 +419,67 @@ public class DragObject : MonoBehaviour
         transform.position = position;
         _targetPosition = position;
         UpdatePlaneHeight();
+    }
+
+    void TrackIgnoredParentContact(Collision collision)
+    {
+        if (_ignoredStackParent == null || !_pendingRestoreBaseHeight)
+            return;
+
+        Transform other = collision.collider.transform;
+        if (other == _ignoredStackParent || other.IsChildOf(_ignoredStackParent))
+        {
+            if (!_ignoredParentColliders.Contains(collision.collider))
+                _ignoredParentColliders.Add(collision.collider);
+        }
+    }
+
+    void Update()
+    {
+        if (_ignoredStackParent == null || _pendingRestoreBaseHeight)
+            return;
+
+        if (_ignoredParentCooldown > 0f)
+            _ignoredParentCooldown -= Time.deltaTime;
+
+        if (_ignoredParentCooldown <= 0f && HasClearedIgnoredParentDistance())
+            ClearIgnoredParentState();
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        if (_ignoredStackParent == null || !_pendingRestoreBaseHeight)
+            return;
+
+        Transform other = collision.collider.transform;
+        if (other != _ignoredStackParent && !other.IsChildOf(_ignoredStackParent))
+            return;
+
+        _ignoredParentColliders.Remove(collision.collider);
+
+        if (_ignoredParentColliders.Count == 0)
+            RestoreBaseHeight();
+    }
+
+    bool HasClearedIgnoredParentDistance()
+    {
+        if (_ignoredStackParent == null)
+            return true;
+
+        if (restackSeparation <= 0f)
+            return true;
+
+        Vector3 offset = transform.position - _ignoredStackParent.position;
+        offset.y = 0f;
+        float minSeparation = restackSeparation;
+        return offset.sqrMagnitude >= minSeparation * minSeparation;
+    }
+
+    void ClearIgnoredParentState()
+    {
+        _ignoredStackParent = null;
+        _ignoredParentColliders.Clear();
+        _pendingRestoreBaseHeight = false;
+        _ignoredParentCooldown = 0f;
     }
 }
