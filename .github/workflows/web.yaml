@@ -1,0 +1,17 @@
+name: Deploy website
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: shelter43/build
+      - uses: actions/deploy-pages@v4
