@@ -81,7 +81,10 @@ public class DragObject : MonoBehaviour
 
     void Awake()
     {
-        if (!CompareTag("Module"))
+        // Permitir uso en Módulos y en Halls (para arrastrar el conjunto)
+        bool isModule = CompareTag("Module");
+        bool isHallHost = GetComponent<HallConnector>() != null;
+        if (!isModule && !isHallHost)
         {
             enabled = false;
             return;
@@ -159,31 +162,73 @@ public class DragObject : MonoBehaviour
     {
         try
         {
-            if (_requireRightClickToDetach && transform.parent != null)
+            // Si este objeto es un Hall, redirige el drag al Hall raíz (primer pasillo de la cadena)
+            var selfHall = GetComponent<HallConnector>();
+            if (selfHall != null)
             {
-                if (!Input.GetMouseButton(1))
-                    return; // ignore left-click while snapped (hall behavior)
+                // Encontrar Hall raíz
+                Transform topHall = transform;
+                var p = transform.parent;
+                while (p != null)
+                {
+                    if (p.GetComponent<HallConnector>() != null)
+                        topHall = p;
+                    p = p.parent;
+                }
+
+                if (Input.GetMouseButton(1))
+                {
+                    // Click derecho: soltar los módulos colgados de este hall concreto
+                    selfHall.DetachGroup();
+                    return;
+                }
+
+                if (topHall != transform)
+                {
+                    var topDrag = topHall.GetComponent<DragObject>();
+                    if (topDrag != null)
+                    {
+                        topDrag.BeginDragFromCursor();
+                        return;
+                    }
+                }
             }
 
-            // If this module is child of a hall, route drag to hall so the group moves as one
+            // Si está bajo un Hall, rutea al Hall raíz para mover el conjunto.
             var parent = transform.parent;
             if (parent != null)
             {
-                var hall = parent.GetComponent<HallConnector>();
-                if (hall != null)
+                // Busca el Hall raíz en los ancestros
+                Transform topHall = null;
+                var p = parent;
+                while (p != null)
+                {
+                    if (p.GetComponent<HallConnector>() != null)
+                        topHall = p;
+                    p = p.parent;
+                }
+                if (topHall != null)
                 {
                     if (Input.GetMouseButton(1))
                     {
-                        hall.DetachGroup();
+                        var h = topHall.GetComponent<HallConnector>();
+                        if (h != null) h.DetachGroup();
                         return;
                     }
-                    var hallDrag = parent.GetComponent<DragObject>();
+                    var hallDrag = topHall.GetComponent<DragObject>();
                     if (hallDrag != null)
                     {
                         hallDrag.BeginDragFromCursor();
                         return;
                     }
                 }
+            }
+
+            // Si está bloqueado para exigir click derecho y no está bajo Hall, ignora
+            if (_requireRightClickToDetach && transform.parent != null)
+            {
+                if (!Input.GetMouseButton(1))
+                    return; // ignorar click izq mientras esté acoplado a otro padre no-Hall
             }
             // Double-click to defuse: if this module has a fused (disabled) child, split and drag child
             float now = Time.time;
@@ -464,12 +509,14 @@ public class DragObject : MonoBehaviour
             ResetVelocities();
             _rigidbody.isKinematic = true;
             _rigidbody.constraints = RigidbodyConstraints.FreezeAll;
+            _rigidbody.interpolation = RigidbodyInterpolation.None;
             _targetPosition = _rigidbody.position;
         }
         else
         {
             _rigidbody.isKinematic = false;
             _rigidbody.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY;
+            _rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
         }
     }
 
