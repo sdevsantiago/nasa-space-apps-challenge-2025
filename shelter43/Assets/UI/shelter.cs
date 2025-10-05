@@ -186,9 +186,9 @@ public class MissionPromptController : MonoBehaviour
         string selected = missionTypeField?.value ?? "Spatial";
 
         if (selected.Contains("Planetary Surface"))
-            ShowBackground("bg_mars_surface");
+            ShowBackground("");
         else
-            ShowBackground("bg_space_orbit");
+            ShowBackground("");
 
         Debug.Log($"Mission created. Type: {selected}, Duration: {missionDurationField?.value ?? "(n/a)"}");
     }

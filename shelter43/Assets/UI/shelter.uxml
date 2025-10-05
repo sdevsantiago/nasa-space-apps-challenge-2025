@@ -1,135 +1,152 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-  <Style src="project://database/Assets/UI/shelter.uss" />
-
-  <ui:VisualElement name="app" class="app">
-
-    <!-- === TOPBAR === -->
-    <ui:VisualElement name="topbar" class="topbar">
-      <!-- LOGO A LA IZQUIERDA -->
-      <ui:Image name="appLogo" class="app-logo" />
-
-      <ui:Button name="btnHome"             text="☰ Home"            class="top-btn" />
-      <ui:Button name="btnMissionDesigner"  text="Mission Designer"   class="top-btn" />
-      <ui:Button name="btnObjectEdition"    text="Object Edition"     class="top-btn" />
-      <ui:Button name="btnMissionExporter"  text="Mission Exporter"   class="top-btn" />
-    </ui:VisualElement>
-
-    <!-- === EDITOR BAR (se muestra tras Create) === -->
-    <ui:VisualElement name="editorBar" class="editor-bar hidden">
-      <ui:Button name="btnLayoutEditor"      text="Layout Editor"      class="editor-btn" />
-      <ui:Button name="btnModuleEditor"      text="Module Editor"      class="editor-btn" />
-      <ui:Button name="btnEnvironmentEditor" text="Environment Editor" class="editor-btn" />
-    </ui:VisualElement>
-
-    <!-- === AREA CENTRAL === -->
-    <ui:VisualElement name="content" class="content">
-      <ui:Label class="welcome" text="Welcome to Shelter 43 UI System" />
-    </ui:VisualElement>
-
-    <!-- === MODAL: MISSION DESIGNER === -->
-    <ui:VisualElement class="modal" name="mdOverlay">
-      <ui:VisualElement class="dialog">
-        <ui:Label text="New Mission" class="dialog-title" />
-
-        <!-- Campos principales -->
-        <ui:VisualElement class="field-group">
-          <ui:Label text="Mission Type" />
-          <ui:DropdownField name="missionType" />
+    <Style src="project://database/Assets/UI/shelter.uss?fileID=7433441132597879392&amp;guid=ebce19f7fb482444992edcfbf99ed8f4&amp;type=3#shelter" />
+    <ui:VisualElement name="app" class="app" style="background-color: rgba(11, 14, 20, 0);">
+        <ui:VisualElement name="topbar" class="topbar">
+            <ui:Image name="appLogo" class="app-logo" />
+            <ui:Button name="btnHome" text="☰ Home" class="top-btn" />
+            <ui:Button name="btnMissionDesigner" text="Mission Designer" class="top-btn" />
+            <ui:Button name="btnObjectEdition" text="Object Edition" class="top-btn" />
+            <ui:Button name="btnMissionExporter" text="Mission Exporter" class="top-btn" />
         </ui:VisualElement>
-
-        <ui:VisualElement class="field-group">
-          <ui:Label text="Duration" />
-          <ui:DropdownField name="missionDuration" />
+        <ui:VisualElement name="editorBar" class="editor-bar hidden">
+            <ui:Button name="btnLayoutEditor" text="Layout Editor" class="editor-btn" />
+            <ui:Button name="btnModuleEditor" text="Module Editor" class="editor-btn" />
+            <ui:Button name="btnEnvironmentEditor" text="Environment Editor" class="editor-btn" />
         </ui:VisualElement>
-
-        <!-- === CREW === -->
-        <ui:VisualElement class="crew-row">
-          <!-- Controles: Crew(n) + y − -->
-          <ui:VisualElement class="crew-controls">
-            <ui:Label  name="crewLabel" text="Crew (0)" class="crew-count" />
-            <ui:Button name="btnAddCrew"    text="+" class="crew-btn" />
-            <ui:Button name="btnRemoveCrew" text="−" class="crew-btn" />
-          </ui:VisualElement>
-          <!-- Iconos que rellena el C# -->
-          <ui:VisualElement name="crewIcons" class="crew-icons" />
+        <ui:VisualElement name="content" class="content" style="overflow: visible; display: none; background-color: rgba(23, 23, 23, 0);">
+            <ui:Label text="Welcome to Shelter 43 UI System" class="welcome" style="display: flex;" />
         </ui:VisualElement>
-
-        <!-- === PREBUILT === -->
-        <ui:Label text="Prebuilt" class="section-label prebuilt-label" />
-        <ui:VisualElement class="prebuilt-row">
-          <ui:RadioButton name="prebuiltYes" text="Yes" />
-          <ui:RadioButton name="prebuiltNo"  text="No"  />
+        <ui:VisualElement name="mdOverlay" class="modal">
+            <ui:VisualElement class="dialog">
+                <ui:Label text="New Mission" class="dialog-title" />
+                <ui:VisualElement class="field-group">
+                    <ui:Label text="Mission Type" />
+                    <ui:DropdownField name="missionType" />
+                </ui:VisualElement>
+                <ui:VisualElement class="field-group">
+                    <ui:Label text="Duration" />
+                    <ui:DropdownField name="missionDuration" />
+                </ui:VisualElement>
+                <ui:VisualElement class="crew-row">
+                    <ui:VisualElement class="crew-controls">
+                        <ui:Label name="crewLabel" text="Crew (0)" class="crew-count" />
+                        <ui:Button name="btnAddCrew" text="+" class="crew-btn" />
+                        <ui:Button name="btnRemoveCrew" text="−" class="crew-btn" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="crewIcons" class="crew-icons" />
+                </ui:VisualElement>
+                <ui:Label text="Prebuilt" class="section-label prebuilt-label" />
+                <ui:VisualElement class="prebuilt-row">
+                    <ui:RadioButton name="prebuiltYes" text="Yes" />
+                    <ui:RadioButton name="prebuiltNo" text="No" />
+                </ui:VisualElement>
+                <ui:VisualElement class="dialog-actions">
+                    <ui:Button name="btnCancel" text="Cancel" class="btn-secondary" />
+                    <ui:Button name="btnCreate" text="Create" class="btn-primary" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
-
-        <!-- Acciones -->
-        <ui:VisualElement class="dialog-actions">
-          <ui:Button name="btnCancel" text="Cancel" class="btn-secondary" />
-          <ui:Button name="btnCreate" text="Create" class="btn-primary" />
+        <ui:VisualElement name="layoutPanel" class="side-panel hidden">
+            <ui:Label text="Module Distribution" class="panel-title" />
+            <ui:Label text="Clean zones" class="section-label" />
+            <ui:VisualElement name="cleanGrid" class="zone-grid">
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🛏️" class="zone-icon" />
+                    <ui:Label text="Private room" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🔬" class="zone-icon" />
+                    <ui:Label text="Science lab" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="➕" class="zone-icon" />
+                    <ui:Label text="Med bay" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🎛️" class="zone-icon" />
+                    <ui:Label text="Control room" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="📦" class="zone-icon" />
+                    <ui:Label text="Logistics" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🧑‍🍳" class="zone-icon" />
+                    <ui:Label text="Galley" class="zone-name" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="Dirty zones" class="section-label" />
+            <ui:VisualElement name="dirtyGrid" class="zone-grid">
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🔧" class="zone-icon" />
+                    <ui:Label text="Maintenance" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🧪" class="zone-icon" />
+                    <ui:Label text="Chem Lab" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🚮" class="zone-icon" />
+                    <ui:Label text="Waste" class="zone-name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="zone-tile">
+                    <ui:Label text="🛠️" class="zone-icon" />
+                    <ui:Label text="Workshop" class="zone-name" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="panel-actions single">
+                <ui:Button name="btnCancelLayout" text="Cancel" class="btn-secondary" />
+            </ui:VisualElement>
         </ui:VisualElement>
-      </ui:VisualElement>
+        <ui:VisualElement name="modulePanel" class="side-panel hidden">
+            <ui:Label text="Module Editor" class="panel-title" />
+            <ui:VisualElement class="field-group">
+                <ui:IntegerField name="heightField" label="Height (m)" />
+                <ui:IntegerField name="widthField" label="Width (m)" />
+                <ui:IntegerField name="depthField" label="Depth (m)" />
+                <ui:Label name="volumeLabel" text="Volume: 0 m³" class="section-label" />
+            </ui:VisualElement>
+            <ui:Label text="Objects" class="section-label" />
+            <ui:VisualElement name="objectGrid" class="tile-grid">
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Crate" class="tile-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Console" class="tile-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Battery" class="tile-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Panel" class="tile-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="Zones" class="section-label" />
+            <ui:VisualElement name="zoneGrid" class="tile-grid">
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Living" class="tile-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Cargo" class="tile-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Engine" class="tile-label" />
+                </ui:VisualElement>
+                <ui:VisualElement class="tile">
+                    <ui:VisualElement class="tile-img" />
+                    <ui:Label text="Control" class="tile-label" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="panel-actions single">
+                <ui:Button name="btnCancelModule" text="Cancel" class="btn-secondary" />
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
-
-    <!-- === PANEL DERECHO: LAYOUT EDITOR (Clean/Dirty) === -->
-    <ui:VisualElement name="layoutPanel" class="side-panel hidden">
-      <ui:Label text="Module Distribution" class="panel-title" />
-
-      <!-- Clean zones -->
-      <ui:Label text="Clean zones" class="section-label" />
-      <ui:VisualElement name="cleanGrid" class="zone-grid">
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🛏️"/><ui:Label class="zone-name" text="Private room"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🔬"/><ui:Label class="zone-name" text="Science lab"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="➕"/><ui:Label class="zone-name" text="Med bay"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🎛️"/><ui:Label class="zone-name" text="Control room"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="📦"/><ui:Label class="zone-name" text="Logistics"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🧑‍🍳"/><ui:Label class="zone-name" text="Galley"/></ui:VisualElement>
-      </ui:VisualElement>
-
-      <!-- Dirty zones -->
-      <ui:Label text="Dirty zones" class="section-label" />
-      <ui:VisualElement name="dirtyGrid" class="zone-grid">
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🔧"/><ui:Label class="zone-name" text="Maintenance"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🧪"/><ui:Label class="zone-name" text="Chem Lab"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🚮"/><ui:Label class="zone-name" text="Waste"/></ui:VisualElement>
-        <ui:VisualElement class="zone-tile"><ui:Label class="zone-icon" text="🛠️"/><ui:Label class="zone-name" text="Workshop"/></ui:VisualElement>
-      </ui:VisualElement>
-
-      <ui:VisualElement class="panel-actions single">
-        <ui:Button name="btnCancelLayout" text="Cancel" class="btn-secondary" />
-      </ui:VisualElement>
-    </ui:VisualElement>
-
-    <!-- === PANEL DERECHO: MODULE EDITOR === -->
-    <ui:VisualElement name="modulePanel" class="side-panel hidden">
-      <ui:Label text="Module Editor" class="panel-title" />
-
-      <ui:VisualElement class="field-group">
-        <ui:IntegerField name="heightField" label="Height (m)" />
-        <ui:IntegerField name="widthField"  label="Width (m)"  />
-        <ui:IntegerField name="depthField"  label="Depth (m)"  />
-        <ui:Label name="volumeLabel" text="Volume: 0 m³" class="section-label" />
-      </ui:VisualElement>
-
-      <ui:Label text="Objects" class="section-label" />
-      <ui:VisualElement name="objectGrid" class="tile-grid">
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Crate"/></ui:VisualElement>
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Console"/></ui:VisualElement>
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Battery"/></ui:VisualElement>
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Panel"/></ui:VisualElement>
-      </ui:VisualElement>
-
-      <ui:Label text="Zones" class="section-label" />
-      <ui:VisualElement name="zoneGrid" class="tile-grid">
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Living"/></ui:VisualElement>
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Cargo"/></ui:VisualElement>
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Engine"/></ui:VisualElement>
-        <ui:VisualElement class="tile"><ui:VisualElement class="tile-img"/><ui:Label class="tile-label" text="Control"/></ui:VisualElement>
-      </ui:VisualElement>
-
-      <ui:VisualElement class="panel-actions single">
-        <ui:Button name="btnCancelModule" text="Cancel" class="btn-secondary" />
-      </ui:VisualElement>
-    </ui:VisualElement>
-
-  </ui:VisualElement>
 </ui:UXML>
-
