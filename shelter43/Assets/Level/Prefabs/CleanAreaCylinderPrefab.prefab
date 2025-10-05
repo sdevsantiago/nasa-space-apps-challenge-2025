@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 817234120946479742}
   - component: {fileID: 1826359335029162790}
   - component: {fileID: 3780211269096227564}
-  m_Layer: 6
+  m_Layer: 7
   m_Name: CleanAreaCylinderPrefab
   m_TagString: Module
   m_Icon: {fileID: 0}

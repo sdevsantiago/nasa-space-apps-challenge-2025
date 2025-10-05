@@ -113,15 +113,59 @@ public class HallConnector : MonoBehaviour
         // Solo aceptamos colisiones provenientes de los colliders de extremo
         var cp = collision.GetContact(0);
         Collider our = cp.thisCollider != null ? cp.thisCollider : null;
-        if (frontEnd != null && IsSameOrChild(our, frontEnd) == false &&
-            backEnd  != null && IsSameOrChild(our, backEnd)  == false)
+        
+        // Determine which end this collision is closest to
+        Vector3 contactPoint = cp.point;
+        bool isFrontContact = false;
+        bool isBackContact = false;
+        
+        if (frontEnd != null && backEnd != null)
         {
-            return; // ignorar colisiones que no vienen de los extremos
+            float distToFront = (contactPoint - frontEnd.bounds.center).sqrMagnitude;
+            float distToBack = (contactPoint - backEnd.bounds.center).sqrMagnitude;
+            
+            // Assign to the closest end
+            if (distToFront < distToBack)
+            {
+                isFrontContact = true;
+            }
+            else
+            {
+                isBackContact = true;
+            }
         }
-        if (frontEnd != null && IsSameOrChild(our, frontEnd) && _frontBusy) return;
-        if (backEnd  != null && IsSameOrChild(our, backEnd)  && _backBusy) return;
+        else if (frontEnd != null)
+        {
+            isFrontContact = true;
+        }
+        else if (backEnd != null)
+        {
+            isBackContact = true;
+        }
+        else
+        {
+            Debug.LogWarning($"[HallConnector] No end colliders configured!");
+            return;
+        }
+        
+        Debug.Log($"[HallConnector] Collision from {module.name}: isFrontContact={isFrontContact}, isBackContact={isBackContact}, _frontBusy={_frontBusy}, _backBusy={_backBusy}");
+        
+        if (isFrontContact && _frontBusy)
+        {
+            Debug.Log($"[HallConnector] Front end is busy, ignoring collision from {module.name}");
+            return;
+        }
+        if (isBackContact && _backBusy)
+        {
+            Debug.Log($"[HallConnector] Back end is busy, ignoring collision from {module.name}");
+            return;
+        }
+        
         Vector3 refPoint = cp.point;
-        TryAttachModule(module, refPoint, our);
+        
+        // Pass which end detected the collision
+        Collider preferredEnd = isFrontContact ? frontEnd : backEnd;
+        TryAttachModule(module, refPoint, preferredEnd);
     }
 
     void OnTriggerStay(Collider other)
@@ -130,21 +174,33 @@ public class HallConnector : MonoBehaviour
         var module = ResolveModuleRoot(other);
         if (module == null) return;
         if (!CanAttach(module)) return;
-        // Usa el punto más cercano al centro del hall como referencia; evita reintentos si está ocupado
-        if (frontEnd != null && _frontBusy)
-        {
-            Vector3 pf = frontEnd.ClosestPoint(transform.position);
-            Vector3 po = other.ClosestPoint(transform.position);
-            if ((pf - po).sqrMagnitude < 0.0004f) return;
-        }
-        if (backEnd != null && _backBusy)
-        {
-            Vector3 pb = backEnd.ClosestPoint(transform.position);
-            Vector3 po = other.ClosestPoint(transform.position);
-            if ((pb - po).sqrMagnitude < 0.0004f) return;
-        }
+        
         Vector3 p = other.ClosestPoint(transform.position);
-        TryAttachModule(module, p, null);
+        
+        // Determine which end is closest
+        Collider preferredEnd = null;
+        if (frontEnd != null && backEnd != null)
+        {
+            float distToFront = (p - frontEnd.bounds.center).sqrMagnitude;
+            float distToBack = (p - backEnd.bounds.center).sqrMagnitude;
+            preferredEnd = (distToFront < distToBack) ? frontEnd : backEnd;
+            
+            // Check if preferred end is busy
+            if (preferredEnd == frontEnd && _frontBusy) return;
+            if (preferredEnd == backEnd && _backBusy) return;
+        }
+        else if (frontEnd != null)
+        {
+            if (_frontBusy) return;
+            preferredEnd = frontEnd;
+        }
+        else if (backEnd != null)
+        {
+            if (_backBusy) return;
+            preferredEnd = backEnd;
+        }
+        
+        TryAttachModule(module, p, preferredEnd);
     }
 
     void TryAttachModule(Transform module, Vector3 refPoint, Collider ourColliderHint)
@@ -160,20 +216,58 @@ public class HallConnector : MonoBehaviour
         Collider endCol = null;
         Vector3 outward = Vector3.forward;
         bool picked = false;
-        if (ourColliderHint == null)
+        
+        Debug.Log($"[HallConnector] TryAttachModule: module={module.name}, ourColliderHint={ourColliderHint?.name}");
+        
+        // If we have a hint about which end collided, use that directly
+        if (ourColliderHint == frontEnd || ourColliderHint == backEnd)
+        {
+            endCol = ourColliderHint;
+            Vector3 fwd = transform.TransformDirection(detectionLocalAxis.sqrMagnitude > 0.0001f ? detectionLocalAxis.normalized : Vector3.forward);
+            outward = (ourColliderHint == frontEnd) ? fwd.normalized : (-fwd).normalized;
+            picked = true;
+            Debug.Log($"[HallConnector] Using collision hint: endCol={endCol?.name}, isFront={ourColliderHint == frontEnd}");
+        }
+        
+        if (!picked && ourColliderHint == null)
         {
             // 1) Si hay solape real con un extremo, usa ese
             picked = SelectEndByOverlap(module, out endCol, out outward);
+            Debug.Log($"[HallConnector] SelectEndByOverlap: picked={picked}, endCol={endCol?.name}");
             // 2) Si no, decide por la posición del módulo proyectada en el eje local
             if (!picked)
+            {
                 picked = SelectEndByAxis(module, out endCol, out outward);
+                Debug.Log($"[HallConnector] SelectEndByAxis: picked={picked}, endCol={endCol?.name}");
+            }
         }
         // 3) Fallback: decide por distancia al punto de referencia
         if (!picked)
         {
             SelectBestEnd(refPoint, ourColliderHint, out endCol, out outward);
+            Debug.Log($"[HallConnector] SelectBestEnd: endCol={endCol?.name}");
         }
-        if (endCol == null) return;
+        
+        if (endCol == null)
+        {
+            Debug.LogWarning($"[HallConnector] Could not select end collider for module {module.name}");
+            return;
+        }
+        
+        bool selectedFront = (endCol == frontEnd);
+        Debug.Log($"[HallConnector] Selected end: {(selectedFront ? "FRONT" : "BACK")}, _frontBusy={_frontBusy}, _backBusy={_backBusy}");
+        
+        // Check if selected end is already busy
+        if (selectedFront && _frontBusy)
+        {
+            Debug.Log($"[HallConnector] Selected FRONT end is already busy, aborting attach for {module.name}");
+            return;
+        }
+        if (!selectedFront && _backBusy)
+        {
+            Debug.Log($"[HallConnector] Selected BACK end is already busy, aborting attach for {module.name}");
+            return;
+        }
 
         // Punto del plano exterior del extremo del hall (proyectado en XZ)
         Vector3 outwardPlanar = new Vector3(outward.x, 0f, outward.z);
@@ -211,6 +305,8 @@ public class HallConnector : MonoBehaviour
         if (isFront) _frontBusy = true; else _backBusy = true;
         _attachedModules[module] = isFront;
         s_ownerByModule[module] = this;
+        
+        Debug.Log($"[HallConnector] Module {module.name} attached to {(isFront ? "FRONT" : "BACK")} end. _frontBusy={_frontBusy}, _backBusy={_backBusy}");
 
         var md = module.GetComponent<DragObject>();
         var hd = _drag;

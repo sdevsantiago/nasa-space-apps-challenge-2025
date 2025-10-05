@@ -58,7 +58,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8204051c68300bd17b9752393888ba8f, type: 3}
       propertyPath: m_Layer
-      value: 7
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8204051c68300bd17b9752393888ba8f, type: 3}
       propertyPath: m_TagString
@@ -193,6 +193,8 @@ MonoBehaviour:
   fusedMaterial: {fileID: 0}
   doubleModelPrefab: {fileID: 0}
   doubleVisualParent: {fileID: 0}
+  contaminatedMaterial: {fileID: 0}
+  enableLayerCheck: 0
 --- !u!114 &2657893239122251955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -211,3 +213,4 @@ MonoBehaviour:
   detectionLocalAxis: {x: 0, y: 0, z: 1}
   reattachCooldown: 0.35
   reattachSeparation: 0.6
+  enableContaminationCheck: 1

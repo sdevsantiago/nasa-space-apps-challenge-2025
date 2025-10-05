@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 2537781576545420860}
   - component: {fileID: 7717707182639559795}
   - component: {fileID: 4537985799107325775}
-  m_Layer: 7
+  m_Layer: 6
   m_Name: DirtyAreaIcospherePrefab 1
   m_TagString: Module
   m_Icon: {fileID: 0}
