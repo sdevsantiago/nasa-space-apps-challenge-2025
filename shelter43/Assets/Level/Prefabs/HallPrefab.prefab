@@ -48,6 +48,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 8204051c68300bd17b9752393888ba8f, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: ab50c4e63bcabe5dd9a531d11dca91f2, type: 2}
     - target: {fileID: 919132149155446097, guid: 8204051c68300bd17b9752393888ba8f, type: 3}
       propertyPath: m_Name
       value: HallPrefab
@@ -176,4 +180,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   snapGap: 0.02
-  maxSnapAngle: 75
+  reattachCooldown: 0.35
+  reattachSeparation: 0.6

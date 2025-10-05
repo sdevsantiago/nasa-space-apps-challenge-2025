@@ -67,7 +67,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: ab50c4e63bcabe5dd9a531d11dca91f2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -159,6 +159,8 @@ MonoBehaviour:
   maxHorizontalSpeed: 18
   maxAcceleration: 70
   maxTargetDistance: 20
+  directFollow: 1
+  followSharpness: 0
   stopEpsilon: 0.0004
   restackCooldown: 0.6
   restackSeparation: 1.2
@@ -166,3 +168,5 @@ MonoBehaviour:
   swapMaterialsOnFuse: 1
   visualRoot: {fileID: 0}
   fusedMaterial: {fileID: 0}
+  doubleModelPrefab: {fileID: 3390174827603235516, guid: ea23129f6a7723a3e9a13dc5f88d2783, type: 3}
+  doubleVisualParent: {fileID: 0}
