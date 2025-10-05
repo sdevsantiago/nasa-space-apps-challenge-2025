@@ -1,19 +1,39 @@
-<div align=center>
-  <h1>Your Home in Space: The Habitat Layout Creator</h1>
-  <p>Shelter 43</p>
-</div>
+# 🛰️ Shelter 43
+> An intuitive, 3D habitat layout creator
 
 ---
 
-## ℹ️ About the Challenge
-> The goal of this hackaton is to create a visual tool that enables users to define a space habitat's shape/volume and explore possible layout options.
+- Create, improve and develop your future house beyond Earth with Shelter 43, the tool that allows you to:
+- Design your own space habitat either from prebuilt modules or from scratch.
+- Scale and adapt your modules based on destination, crew size and duration.
+- Drag and drop modules: sleep, hygiene, recreation, life support and much more.
+- Receive instant feedback on constraints, adjacency rules, and compliance with NASA/ESA standards.
+- No complex CAD software. No simulation overload. Just an intuitive and visual design experience, turning complex engineering into an interactive, creative process.
+## 🧑‍🚀 Easy to use
+Accessible from your browser, Shelter 43 allows anyone, from students or enthusiasts to aerospace professionals, create and explore space habitat layouts for different missions. Create a functional layout in under 3 minutes with the use of templates and previous models. Import your models and adapt them to life outside Earth.
+## 🌎 Share it with the world
+Share your designs with other builders from all around the world (or space) or bring them to life exporting your models to other platforms.
+## 🏘️ Build the future
+Help future astronauts on their missions, design space habitats focused on crew experience and human-centered ergonomics.
+## 📊 Real standards
+Create realistic habitats using NASA/ESA benchmarking practices. New discoveries and technology will be incorporated, enabling your habitats to be always up-to-date.
 
-Space habitats are “homes in space” that keep crew members healthy and able to execute their mission. Whether located on a planetary surface or in space, habitats must support critical functions such as waste management, thermal control, life support, communications, power, stowage, food storage and preparation, medical care, sleep, and exercise. Space habitat concepts can involve a diverse array of materials, geometries, and layouts.
+---
 
-## Background
+## Build
+Although [build](shelter43/build/) files are provided, a local deply is needed to test the application.
 
-NASA plans to return humans to the Moon and enable a sustained presence there through the Artemis campaign. The Moon will serve as a proving ground for technologies and operational approaches that will inform future human missions to Mars. Space habitats can potentially support crews on the Moon, in transit to Mars, and on the Martian surface, enabling longer mission durations, increased crew sizes, and comprehensive science investigations. Space habitat designers must consider not only the structural, manufacturing, and material options that can be used to construct a habitat, but also the constraints imposed by delivery/deployment methods (e.g., the capacity of a lunar surface landing system and/or a launch vehicle). In addition, a space habitat must provide numerous functions to support the required number of crew members for the specified mission duration at the final destination and/or while they are in transit to that destination.
+### Nginx
+Copy all the contents from [shelter43/build](shelter43/build/) to `/usr/share/nginx/html` (or your desired folder) and access the website via your browser by typing the following URL:
+```
+localhost:80
+```
+*Port can change depending on your settings, the URL shown corresponds to Nginx's default settings*
 
-There are generally three different classes of space habitat structures: metallic habitats that are launched from Earth in their usable form, inflatable habitats that are stowed for launch and deployed at the point of use, and habitats that can be manufactured on a planetary surface, potentially from indigenous resources. Examples of habitat concepts and layouts previously developed by NASA as well as a reference document about the habitat volumes needed to support specific crew functions are included in the Resources tab.
+---
 
-While there are existing software tools that can help users design the physical layout of a structure, it takes a non-trivial amount of time to create a concept for a space habitat—especially when the designer needs to consider many different options. In addition, some of these tools require a high level of expertise/familiarity with the software to use them effectively, and many do not include certain features that would aid a space habitat designer.
+## 🛠️ Software used
+- Unity (C#, USS, UXML) - App creation
+- Blender and Maya - 3D modelling
+- Photoshop - 2D assets design
+- Adobe After Effects - Video creation
