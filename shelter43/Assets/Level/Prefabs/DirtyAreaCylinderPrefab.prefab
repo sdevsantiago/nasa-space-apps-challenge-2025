@@ -170,3 +170,5 @@ MonoBehaviour:
   fusedMaterial: {fileID: 0}
   doubleModelPrefab: {fileID: 670326376485149091, guid: 9818f7d9c83c1b93ca97200fbe20d083, type: 3}
   doubleVisualParent: {fileID: 0}
+  contaminatedMaterial: {fileID: 2100000, guid: e2e7bbf2fddc26c4daced9c8d6916930, type: 2}
+  enableLayerCheck: 1

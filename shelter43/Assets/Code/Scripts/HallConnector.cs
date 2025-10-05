@@ -44,11 +44,23 @@ public class HallConnector : MonoBehaviour
     System.Collections.Generic.Dictionary<Transform, bool> _attachedModules = new System.Collections.Generic.Dictionary<Transform, bool>(); // module -> true(front)
     static System.Collections.Generic.Dictionary<Transform, HallConnector> s_ownerByModule = new System.Collections.Generic.Dictionary<Transform, HallConnector>();
 
+    [Header("Contamination")]
+    [Tooltip("Enable contamination checking when modules attach to hall.")]
+    [SerializeField] bool enableContaminationCheck = true;
+
+    int _dirtyAreaLayer;
+    int _cleanAreaLayer;
+    int _hallLayer;
+
     void Awake()
     {
         _drag = GetComponent<DragObject>();
         AutoDetectEndsIfNeeded();
         CacheOwnCollidersSnapshot();
+        // Initialize layer indices for contamination check
+        _dirtyAreaLayer = LayerMask.NameToLayer("DirtyArea");
+        _cleanAreaLayer = LayerMask.NameToLayer("CleanArea");
+        _hallLayer = LayerMask.NameToLayer("Hall");
     }
 
     void OnValidate()
@@ -224,6 +236,12 @@ public class HallConnector : MonoBehaviour
 
         // Ignorar colisiones entre el hall y el módulo acoplado para evitar vibraciones
         IgnoreCollisionsWithModule(module, true);
+        
+        // Chequear contaminación tras acoplar (opcional)
+        if (enableContaminationCheck)
+        {
+            CheckHallContamination();
+        }
     }
 
     void Detach()
@@ -231,13 +249,19 @@ public class HallConnector : MonoBehaviour
         if (!_snapped) return;
         _snapped = false;
         _drag.SetRequireRightClickToDetach(false);
-
-        // Desvincula todos los hijos tipo Módulo
+        // Desvincula todos los hijos tipo Módulo y restaura materiales si aplica
         for (int i = transform.childCount - 1; i >= 0; i--)
         {
             var c = transform.GetChild(i);
             if (!c.CompareTag("Module")) continue;
             var md = c.GetComponent<DragObject>();
+            
+            // Restore original material before detaching
+            if (md != null && enableContaminationCheck)
+            {
+                md.RestoreOriginalMaterial();
+            }
+            
             Transform container = DragObject.FindNonModuleAncestor(c, true);
             if (container == null) container = transform.parent;
             c.SetParent(container, true);
@@ -699,6 +723,58 @@ public class HallConnector : MonoBehaviour
         if (!ignore)
         {
             _ignoredHallPairs.Remove(otherHall);
+        }
+    }
+
+    /// <summary>
+    /// Check if modules connected to this hall have mixed clean/dirty layers.
+    /// If so, contaminate them by applying contaminated material to their siblings.
+    /// </summary>
+    void CheckHallContamination()
+    {
+        bool hasDirty = false;
+        bool hasClean = false;
+
+        Debug.Log($"[HallConnector] Checking contamination for hall {name}");
+
+        // Check all child modules for their layers
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            var child = transform.GetChild(i);
+            if (!child.CompareTag("Module")) continue;
+
+            int childLayer = child.gameObject.layer;
+            Debug.Log($"[HallConnector] Child {child.name} layer: {childLayer} (LayerName: {LayerMask.LayerToName(childLayer)})");
+
+            if (childLayer == _dirtyAreaLayer)
+                hasDirty = true;
+            else if (childLayer == _cleanAreaLayer)
+                hasClean = true;
+        }
+
+        Debug.Log($"[HallConnector] Hall contamination result: hasDirty={hasDirty}, hasClean={hasClean}");
+
+        // If both dirty and clean modules are present, contaminate all modules
+        if (hasDirty && hasClean)
+        {
+            Debug.Log($"[HallConnector] Contamination detected! Applying contaminated material to all modules.");
+
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (!child.CompareTag("Module")) continue;
+
+                var dragObj = child.GetComponent<DragObject>();
+                if (dragObj != null)
+                {
+                    dragObj.FindAndCacheSibling();
+                    dragObj.CheckAndApplyContamination();
+                }
+            }
+        }
+        else
+        {
+            Debug.Log($"[HallConnector] No contamination detected. Modules are clean.");
         }
     }
 }

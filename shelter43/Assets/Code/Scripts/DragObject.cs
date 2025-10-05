@@ -45,6 +45,12 @@ public class DragObject : MonoBehaviour
     [SerializeField] GameObject doubleModelPrefab;
     [SerializeField] Transform doubleVisualParent; // if null, uses this.transform
 
+    [Header("Contamination (Layer Detection)")]
+    [Tooltip("Material to apply when object has mixed DirtyArea and CleanArea layers.")]
+    [SerializeField] Material contaminatedMaterial;
+    [Tooltip("Enable layer checking for DirtyArea/CleanArea mix detection.")]
+    [SerializeField] bool enableLayerCheck = false;
+
     Vector3 _dragOffset;
     Plane _dragPlane;
     Rigidbody _rigidbody;
@@ -78,6 +84,13 @@ public class DragObject : MonoBehaviour
     float _originalAngularDrag;
     RigidbodyInterpolation _originalInterpolation;
     CollisionDetectionMode _originalCollisionDetection;
+    bool _checkCleanDirty = false;
+    bool _isContaminated = false;
+    int _dirtyAreaLayer = 6;
+    int _cleanAreaLayer = 7;
+    MeshRenderer _meshRenderer;
+    Material[] _originalMeshMaterials;
+    Transform _sibling; // the sibling transform to apply contamination visual
 
     void Awake()
     {
@@ -103,6 +116,10 @@ public class DragObject : MonoBehaviour
 
         if (visualRoot == null) visualRoot = transform;
         if (doubleVisualParent == null) doubleVisualParent = transform;
+
+        // Initialize layer indices for contamination check
+        _dirtyAreaLayer = LayerMask.NameToLayer("DirtyArea");
+        _cleanAreaLayer = LayerMask.NameToLayer("CleanArea");
     }
 
     void OnValidate()
@@ -447,6 +464,14 @@ public class DragObject : MonoBehaviour
                     SetIdleMode(true);
                     ApplyStackState(true);
                     Debug.Log($"[DragObject] Stacked {name} on {targetModule.name} via collision");
+                    // Check for layer contamination (DirtyArea + CleanArea mix)
+                    if (enableLayerCheck)
+                    {
+                        Debug.Log("CheckAndApplyContamination called");
+                        FindAndCacheSibling();
+                        CheckAndApplyContamination();
+                    }
+
                     return;
                 }
             }
@@ -1279,5 +1304,151 @@ public class DragObject : MonoBehaviour
         if (!found)
             return 0f;
         return root.position.y - bottom;
+    }
+
+    public void FindAndCacheSibling()
+    {
+        // Find the sibling (assumes only one sibling exists)
+        if (_sibling == null && transform.parent != null)
+        {
+            for (int i = 0; i < transform.parent.childCount; i++)
+            {
+                Transform child = transform.parent.GetChild(i);
+                if (child != transform)
+                {
+                    _sibling = child;
+                    Debug.Log($"[DragObject] Found sibling: {_sibling.name}");
+                    break;
+                }
+            }
+        }
+
+        // Cache MeshRenderer and original materials from sibling
+        if (_sibling != null && _meshRenderer == null)
+        {
+            _meshRenderer = _sibling.GetComponent<MeshRenderer>();
+            if (_meshRenderer != null)
+            {
+                _originalMeshMaterials = _meshRenderer.sharedMaterials;
+                Debug.Log($"[DragObject] Cached MeshRenderer from sibling: {_sibling.name}, materials count: {_originalMeshMaterials?.Length}");
+            }
+            else
+            {
+                Debug.LogWarning($"[DragObject] Sibling {_sibling.name} has no MeshRenderer!");
+            }
+        }
+    }
+
+    public void RestoreOriginalMaterial()
+    {
+        if (_meshRenderer != null && _originalMeshMaterials != null)
+        {
+            _meshRenderer.sharedMaterials = _originalMeshMaterials;
+            _isContaminated = false;
+            Debug.Log($"[DragObject] {name} restored original materials.");
+        }
+    }
+
+    public void CheckAndApplyContamination()
+    {
+        bool hasDirty = false;
+        bool hasClean = false;
+
+        Debug.Log($"[DragObject] === Contamination Check for {name} ===");
+        Debug.Log($"[DragObject] _dirtyAreaLayer={_dirtyAreaLayer}, _cleanAreaLayer={_cleanAreaLayer}");
+        Debug.Log($"[DragObject] This object layer: {gameObject.layer} (LayerName: {LayerMask.LayerToName(gameObject.layer)})");
+        Debug.Log($"[DragObject] Sibling: {(_sibling != null ? _sibling.name : "NULL")}");
+
+        // Check this object's layer
+        if (gameObject.layer == _dirtyAreaLayer)
+            hasDirty = true;
+        else if (gameObject.layer == _cleanAreaLayer)
+            hasClean = true;
+
+        // Check sibling layer (the visual mesh to be contaminated)
+        if (_sibling != null)
+        {
+            int siblingLayer = _sibling.gameObject.layer;
+            Debug.Log($"[DragObject] Sibling {_sibling.name} layer: {siblingLayer} (LayerName: {LayerMask.LayerToName(siblingLayer)})");
+            if (siblingLayer == _dirtyAreaLayer)
+                hasDirty = true;
+            else if (siblingLayer == _cleanAreaLayer)
+                hasClean = true;
+        }
+
+        // Check parent layer (if this module is stacked on another)
+        if (transform.parent != null && transform.parent.CompareTag("Module"))
+        {
+            int parentLayer = transform.parent.gameObject.layer;
+            Debug.Log($"[DragObject] Parent {transform.parent.name} layer: {parentLayer} (LayerName: {LayerMask.LayerToName(parentLayer)})");
+            if (parentLayer == _dirtyAreaLayer)
+                hasDirty = true;
+            else if (parentLayer == _cleanAreaLayer)
+                hasClean = true;
+        }
+
+        // Check child layer (if this module has a fused child)
+        if (_fusedChild != null)
+        {
+            int childLayer = _fusedChild.gameObject.layer;
+            Debug.Log($"[DragObject] Fused child {_fusedChild.name} layer: {childLayer} (LayerName: {LayerMask.LayerToName(childLayer)})");
+            if (childLayer == _dirtyAreaLayer)
+                hasDirty = true;
+            else if (childLayer == _cleanAreaLayer)
+                hasClean = true;
+        }
+
+        Debug.Log($"[DragObject] {name} contamination result: hasDirty={hasDirty}, hasClean={hasClean}");
+
+        // Apply contamination if mixed layers detected
+        bool shouldBeContaminated = hasDirty && hasClean;
+        Debug.Log($"[DragObject] shouldBeContaminated={shouldBeContaminated}, _isContaminated={_isContaminated}");
+
+        if (shouldBeContaminated != _isContaminated)
+        {
+            _isContaminated = shouldBeContaminated;
+            Debug.Log($"[DragObject] Contamination state changed! New state: {_isContaminated}");
+
+            Debug.Log($"[DragObject] _meshRenderer is null? {_meshRenderer == null}");
+            if (_meshRenderer != null)
+            {
+                Debug.Log($"[DragObject] _meshRenderer found on {_meshRenderer.gameObject.name}");
+                
+                if (_isContaminated && contaminatedMaterial != null)
+                {
+                    Debug.Log($"[DragObject] Applying contaminated material: {contaminatedMaterial.name} to sibling");
+                    int len = _meshRenderer.sharedMaterials != null ? _meshRenderer.sharedMaterials.Length : 1;
+                    Debug.Log($"[DragObject] Material array length: {len}");
+                    Material[] mats = new Material[len];
+                    for (int m = 0; m < len; m++)
+                        mats[m] = contaminatedMaterial;
+                    _meshRenderer.sharedMaterials = mats;
+
+                    Debug.Log($"[DragObject] {name} sibling contaminated! Applied contamination material.");
+                }
+                else if (!_isContaminated && _originalMeshMaterials != null)
+                {
+                    Debug.Log($"[DragObject] Restoring original materials (count: {_originalMeshMaterials.Length})");
+                    _meshRenderer.sharedMaterials = _originalMeshMaterials;
+                    Debug.Log($"[DragObject] {name} sibling decontaminated. Restored original materials.");
+                }
+                else if (_isContaminated && contaminatedMaterial == null)
+                {
+                    Debug.LogWarning($"[DragObject] {name} should be contaminated but contaminatedMaterial is NULL!");
+                }
+                else if (!_isContaminated && _originalMeshMaterials == null)
+                {
+                    Debug.LogWarning($"[DragObject] {name} should restore materials but _originalMeshMaterials is NULL!");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[DragObject] {name} sibling has no MeshRenderer! Cannot apply contamination visual.");
+            }
+        }
+        else
+        {
+            Debug.Log($"[DragObject] No contamination state change needed.");
+        }
     }
 }
