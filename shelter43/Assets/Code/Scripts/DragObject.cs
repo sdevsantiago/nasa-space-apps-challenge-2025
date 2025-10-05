@@ -62,12 +62,14 @@ public class DragObject : MonoBehaviour
     bool _initialDetectCollisions;
     float _stackedLocalY;
     bool _suppressNextMouseDown;
+    bool _requireRightClickToDetach;
     Transform _fusedChild; // disabled child while fused
     List<Renderer> _renderers;
     List<Material[]> _originalMaterials;
     bool _visualsCached;
     float _lastClickTime;
     GameObject _doubleInstance;
+    bool _isStackedOnModule;
 
     RigidbodyConstraints _originalConstraints;
     bool _originalUseGravity;
@@ -157,6 +159,32 @@ public class DragObject : MonoBehaviour
     {
         try
         {
+            if (_requireRightClickToDetach && transform.parent != null)
+            {
+                if (!Input.GetMouseButton(1))
+                    return; // ignore left-click while snapped (hall behavior)
+            }
+
+            // If this module is child of a hall, route drag to hall so the group moves as one
+            var parent = transform.parent;
+            if (parent != null)
+            {
+                var hall = parent.GetComponent<HallConnector>();
+                if (hall != null)
+                {
+                    if (Input.GetMouseButton(1))
+                    {
+                        hall.DetachGroup();
+                        return;
+                    }
+                    var hallDrag = parent.GetComponent<DragObject>();
+                    if (hallDrag != null)
+                    {
+                        hallDrag.BeginDragFromCursor();
+                        return;
+                    }
+                }
+            }
             // Double-click to defuse: if this module has a fused (disabled) child, split and drag child
             float now = Time.time;
             bool isDoubleClick = now - _lastClickTime <= 0.3f;
@@ -211,6 +239,7 @@ public class DragObject : MonoBehaviour
 
                 Debug.Log($"[DragObject] Detaching {name} from parent {previousParent.name} -> container {(restoreParent? restoreParent.name: "<none>")}");
                 transform.SetParent(restoreParent, true);
+                _isStackedOnModule = false;
             }
 
             SetIdleMode(false);
@@ -353,17 +382,21 @@ public class DragObject : MonoBehaviour
             if (collision.contactCount == 0)
                 return;
 
+            // Halls do not participate in module stacking
+            if (IsHallTransform(transform))
+                return;
+
             TrackIgnoredParentContact(collision);
 
-            ContactPoint contact = collision.GetContact(0);
-            DragObject targetModule = collision.collider.GetComponentInParent<DragObject>();
+            ContactPoint selectedContact;
+            DragObject targetModule = SelectModuleTarget(collision, out selectedContact);
             if (targetModule == null)
                 return;
 
             if (!_pendingRestoreBaseHeight && targetModule != null && targetModule != this && !targetModule.transform.IsChildOf(transform))
             {
                 Debug.Log($"[DragObject] Collision with module {targetModule.name} from {name}. Trying stack...");
-                if (!ShouldIgnoreStacking(targetModule.transform) && TryStackOnModule(contact, collision.collider, targetModule))
+                if (!ShouldIgnoreStacking(targetModule.transform) && TryStackOnModule(selectedContact, collision.collider, targetModule))
                 {
                     _isDragging = false;
                     SetIdleMode(true);
@@ -373,7 +406,7 @@ public class DragObject : MonoBehaviour
                 }
             }
 
-            Vector3 normal = contact.normal;
+            Vector3 normal = selectedContact.normal;
             normal.y = 0f;
             if (normal.sqrMagnitude <= 0.0001f)
                 return;
@@ -444,7 +477,8 @@ public class DragObject : MonoBehaviour
     {
         if (_rigidbody == null)
             return;
-
+        if (_rigidbody.isKinematic)
+            return;
         _rigidbody.linearVelocity = Vector3.zero;
         _rigidbody.angularVelocity = Vector3.zero;
     }
@@ -478,6 +512,9 @@ public class DragObject : MonoBehaviour
                 Debug.Log($"[DragObject] TryStackOnModule rejected: same/child transform {name} -> {targetModule.name}");
                 return false;
             }
+
+            if (!IsValidModuleBase(targetModule.transform))
+                return false;
 
             Transform baseModule = GetModuleBase(targetModule.transform);
             if (baseModule != targetModule.transform)
@@ -533,10 +570,12 @@ public class DragObject : MonoBehaviour
 
             ClearIgnoredParentState();
 
-            // Mark fusion on base: disable this as child and swap base visuals
+            // Mark fusion on base: disable this as child and swap base visuals (modules only)
             var baseDrag = baseModule.GetComponent<DragObject>();
-            if (baseDrag != null)
+            if (baseDrag != null && baseModule.GetComponent<HallConnector>() == null)
                 baseDrag.OnChildFused(transform);
+
+            _isStackedOnModule = true;
 
             Debug.Log($"[DragObject] TryStackOnModule OK: {name} parent={baseModule.name} y={alignedPosition.y}");
             return true;
@@ -563,6 +602,9 @@ public class DragObject : MonoBehaviour
                 Debug.Log($"[DragObject] TryStackOnModuleTrigger rejected: same/child transform {name} -> {targetModule.name}");
                 return false;
             }
+
+            if (!IsValidModuleBase(targetModule.transform))
+                return false;
 
             Transform baseModule = GetModuleBase(targetModule.transform);
             if (baseModule != targetModule.transform)
@@ -612,8 +654,10 @@ public class DragObject : MonoBehaviour
             ClearIgnoredParentState();
 
             var baseDrag = baseModule.GetComponent<DragObject>();
-            if (baseDrag != null)
+            if (baseDrag != null && baseModule.GetComponent<HallConnector>() == null)
                 baseDrag.OnChildFused(transform);
+
+            _isStackedOnModule = true;
 
             Debug.Log($"[DragObject] TryStackOnModuleTrigger OK: {name} parent={baseModule.name} y={alignedPosition.y}");
             return true;
@@ -744,7 +788,20 @@ public class DragObject : MonoBehaviour
         // Fallback click: ensure stacked child is clickable even if occluded
         if (!_isDragging && transform.parent != null && transform.parent.CompareTag("Module") && _collider != null)
         {
-            if (Input.GetMouseButtonDown(0) && ValidateCamera())
+            if (Input.GetMouseButtonDown(0) && !_requireRightClickToDetach && ValidateCamera())
+            {
+                var ray = dragCamera.ScreenPointToRay(Input.mousePosition);
+                var hits = Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide);
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    if (hits[i].collider == _collider)
+                    {
+                        OnMouseDown();
+                        break;
+                    }
+                }
+            }
+            else if (Input.GetMouseButtonDown(1) && _requireRightClickToDetach && ValidateCamera())
             {
                 var ray = dragCamera.ScreenPointToRay(Input.mousePosition);
                 var hits = Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide);
@@ -795,6 +852,10 @@ public class DragObject : MonoBehaviour
             if (!_isDragging || _rigidbody == null)
                 return;
 
+            // Halls do not participate in module stacking
+            if (IsHallTransform(transform))
+                return;
+
             DragObject targetModule = other.GetComponentInParent<DragObject>();
             if (targetModule == null)
                 return;
@@ -807,6 +868,10 @@ public class DragObject : MonoBehaviour
             }
 
             Debug.Log($"[DragObject] Trigger with module {targetModule.name} from {name}. Trying stack (trigger)...");
+            int hallLayer = LayerMask.NameToLayer("Hall");
+            if ((gameObject.layer == hallLayer && hallLayer >= 0) || (targetModule.gameObject.layer == hallLayer && hallLayer >= 0))
+                return;
+
             if (!ShouldIgnoreStacking(targetModule.transform) && TryStackOnModuleTrigger(other, targetModule))
             {
                 _isDragging = false;
@@ -839,9 +904,9 @@ public class DragObject : MonoBehaviour
     void LateUpdate()
     {
         Transform p = transform.parent;
-        if (p != null && p.CompareTag("Module"))
+        if (_isStackedOnModule && p != null && p.CompareTag("Module"))
         {
-            // Hard lock to parent so there's no lag.
+            // Hard lock only for stacked modules (not halls).
             Vector3 local = transform.localPosition;
             local.x = 0f;
             local.z = 0f;
@@ -900,6 +965,22 @@ public class DragObject : MonoBehaviour
         _pendingRestoreBaseHeight = true;
         _ignoredParentCooldown = restackCooldown;
         ApplyStackState(false);
+    }
+
+    public void SetRequireRightClickToDetach(bool required)
+    {
+        _requireRightClickToDetach = required;
+    }
+
+    public void DropToBaseHeightNow()
+    {
+        // Snap this object to its base locked Y and update plane height
+        lockedY = _baseLockedY;
+        Vector3 pos = _rigidbody != null ? _rigidbody.position : transform.position;
+        pos.y = lockedY;
+        MoveTo(pos);
+        ResetVelocities();
+        ClearIgnoredParentState();
     }
 
     // FUSION/VISUAL SWAP HELPERS
@@ -1003,10 +1084,7 @@ public class DragObject : MonoBehaviour
             if (fused)
             {
                 if (fusedMaterial == null)
-                {
-                    Debug.LogWarning($"[DragObject] No fusedMaterial assigned on {name}; visual swap skipped.");
-                    return;
-                }
+                    return; // silent skip if no material provided
                 for (int i = 0; i < _renderers.Count; i++)
                 {
                     var r = _renderers[i];
@@ -1063,6 +1141,53 @@ public class DragObject : MonoBehaviour
         if (rname.Contains("icosphere")) return "icosphere";
         if (rname.Contains("cylinder")) return "cylinder";
         return string.Empty;
+    }
+
+    // Prefer a Module target (tag "Module", not Hall) from a collision
+    DragObject SelectModuleTarget(Collision collision, out ContactPoint selected)
+    {
+        selected = collision.GetContact(0);
+        // Try all contacts to find a Module target
+        int cnt = collision.contactCount;
+        for (int i = 0; i < cnt; i++)
+        {
+            var cp = collision.GetContact(i);
+#if UNITY_2020_1_OR_NEWER
+            Collider otherCol = cp.otherCollider != null ? cp.otherCollider : collision.collider;
+#else
+            Collider otherCol = collision.collider;
+#endif
+            if (otherCol == null) continue;
+            var d = otherCol.GetComponentInParent<DragObject>();
+            if (d == null) continue;
+            if (!IsValidModuleBase(d.transform)) continue;
+            selected = cp;
+            return d;
+        }
+
+        // fallback: use collision.collider if valid Module
+        var dflt = collision.collider != null ? collision.collider.GetComponentInParent<DragObject>() : null;
+        if (dflt != null && IsValidModuleBase(dflt.transform))
+            return dflt;
+        return null;
+    }
+
+    static bool IsValidModuleBase(Transform t)
+    {
+        if (t == null) return false;
+        if (!t.CompareTag("Module")) return false;
+        if (t.GetComponent<HallConnector>() != null) return false;
+        int hall = LayerMask.NameToLayer("Hall");
+        if (hall >= 0 && t.gameObject.layer == hall) return false;
+        return true;
+    }
+
+    static bool IsHallTransform(Transform t)
+    {
+        if (t == null) return false;
+        if (t.GetComponent<HallConnector>() != null) return true;
+        int hall = LayerMask.NameToLayer("Hall");
+        return (hall >= 0 && t.gameObject.layer == hall);
     }
 
     float ComputeTopY(Transform root)
