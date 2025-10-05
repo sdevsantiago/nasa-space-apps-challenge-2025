@@ -1,0 +1,181 @@
+/* === PALETA “Exploración profunda” === */
+.app {
+  position: relative;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background-color: #0B0E14;
+  color: #ECECEC;
+}
+
+/* Top bar */
+.topbar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: #1A1E27;
+  border-bottom: 1px solid #2A2F3A;
+}
+
+/* LOGO EN LA TOPBAR */
+.app-logo {
+  width: 36px;
+  height: 36px;
+  margin-right: 8px;
+  -unity-background-scale-mode: scale-to-fit;
+  border-radius: 6px;
+}
+
+.top-btn {
+  background-color: transparent;
+  color: #ECECEC;
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin-right: 10px;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+}
+.top-btn:hover { background-color: #1A1E27; border-bottom-color: #46C7FA; }
+.top-btn:focus { border-bottom-color: #46C7FA; }
+
+/* Centro */
+.content { flex-grow: 1; align-items: center; justify-content: center; background-color: transparent; }
+.welcome { font-size: 16px; color: #A9AFB9; }
+
+/* Botonera editores */
+.editor-bar { display: flex; flex-direction: row; justify-content: center; align-items: center; margin-top: 20px; z-index: 1; }
+.editor-btn { background-color: #46C7FA; color: #0B0E14; border-radius: 8px; padding: 8px 18px; margin: 0 10px; font-weight: bold; }
+.editor-btn:hover { background-color: #63D4FF; }
+.editor-btn:active { background-color: #2BAFE3; }
+
+/* Panel lateral */
+.side-panel {
+  position: absolute; right: 0; top: 60px; bottom: 0; width: 320px;
+  background-color: rgba(26, 30, 39, 0.60);
+  padding: 16px; border-left: 1px solid #2A2F3A;
+  display: flex; flex-direction: column; align-items: center; color: #ECECEC;
+}
+.panel-title { font-size: 18px; -unity-font-style: bold; color: #46C7FA; margin-bottom: 10px; width: 100%; -unity-text-align: middle-center; }
+.section-label { margin-top: 8px; -unity-font-style: bold; color: #A9AFB9; width: 100%; -unity-text-align: middle-center; }
+.panel-actions { flex-direction: row; justify-content: space-between; margin-top: auto; width: 100%; }
+.panel-actions.single { justify-content: center; }
+
+/* Campos generales */
+.field-group { display: flex; flex-direction: column; width: 100%; }
+.field-group > * { margin-bottom: 6px; }
+.unity-base-field { background-color: #1A1E27; border: 1px solid #2A2F3A; border-radius: 6px; }
+.unity-base-field:focus { border-color: #46C7FA; }
+.unity-base-text-field__input, .unity-text-field__input, .unity-integer-field__input { color: #ECECEC; background-color: #0B0E14; }
+.unity-text-field__placeholder { color: #6B717A; }
+
+/* Modal */
+.modal { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background-color: rgba(11,14,20,0.85); }
+.hidden { display: none; }
+.dialog { width: 520px; display: flex; flex-direction: column; padding: 24px; background-color: #1A1E27; border-radius: 12px; border: 1px solid #2A2F3A; }
+.dialog-title { font-size: 22px; -unity-font-style: bold; color: #46C7FA; -unity-text-align: middle-center; margin-bottom: 12px; }
+.dialog-actions { flex-direction: row; justify-content: space-between; margin-top: 12px; }
+
+/* Botones globales */
+.btn-primary, .dialog .btn-primary, .side-panel .btn-primary {
+  background-color: #46C7FA !important; color: #0B0E14 !important; border-radius: 8px; padding: 8px 14px; -unity-font-style: bold;
+}
+.btn-primary:hover, .dialog .btn-primary:hover, .side-panel .btn-primary:hover { background-color: #63D4FF !important; }
+.btn-primary:active { background-color: #2BAFE3 !important; }
+
+.btn-secondary, .dialog .btn-secondary, .side-panel .btn-secondary {
+  background-color: #FF9E00 !important; color: #0B0E14 !important; border-radius: 8px; padding: 8px 14px; -unity-font-style: bold;
+}
+.btn-secondary:hover, .dialog .btn-secondary:hover, .side-panel .btn-secondary:hover { background-color: #FFB733 !important; }
+
+/* Crew + Prebuilt */
+.modal .crew-row { width: 100%; display: flex; flex-direction: row; align-items: center; padding-left: 140px; padding-right: 8px; margin-top: 12px; }
+.modal .crew-controls { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
+.modal .crew-count { color: #A9AFB9; font-size: 14px; }
+.modal .crew-btn { min-width: 28px; width: 28px; height: 28px; padding: 0; border-radius: 50%; color: #ECECEC; background-color: #2A2F3A; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.modal .crew-btn:hover { background-color: #303540; }
+.modal .crew-icons { display: inline-flex; flex-direction: row; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start; min-height: 28px; }
+.avatar { font-size: 18px; color: #46C7FA; }
+
+.modal .prebuilt-label { -unity-text-align: upper-left; padding-left: 140px; margin-top: 14px; }
+.modal .prebuilt-row { display: inline-flex; flex-direction: row; align-items: center; gap: 16px; margin-left: 140px; width: auto; }
+.modal .prebuilt-row .unity-radio-button { flex-grow: 0; min-width: auto; }
+
+/* Tiles */
+.tile-grid { display: flex; flex-direction: row; flex-wrap: wrap; margin: 4px -4px 8px -4px; }
+.tile { width: 80px; height: 100px; background-color: #1A1E27; border-radius: 6px; margin: 4px; padding: 6px; align-items: center; justify-content: flex-start; border-top: 1px solid #2A2F3A; }
+.tile-img { width: 68px; height: 60px; background-color: #2A2F3A; border-radius: 4px; margin-bottom: 6px; }
+.tile-label { -unity-text-align: middle-center; font-size: 11px; color: #ECECEC; }
+.tile.selected, .zone-tile.selected { border-top-width: 2px; border-top-color: #46C7FA; border-right-width: 2px; border-right-color: #46C7FA; border-bottom-width: 2px; border-bottom-color: #46C7FA; border-left-width: 2px; border-left-color: #46C7FA; }
+
+/* Zones */
+.zone-grid { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; margin: 6px -4px 14px -4px; width: 100%; }
+.zone-tile { width: 96px; height: 96px; margin: 6px; padding: 8px; border-radius: 10px; background-color: rgba(42, 47, 58, 0.85); align-items: center; justify-content: center; border-top: 1px solid #2F3642; }
+.zone-tile:hover { background-color: rgba(48, 53, 64, 0.92); }
+.zone-icon { font-size: 22px; margin-bottom: 6px; -unity-text-align: middle-center; }
+.zone-name { width: 100%; font-size: 11px; color: #ECECEC; -unity-text-align: middle-center; white-space: nowrap; overflow: hidden; -unity-text-overflow: ellipsis; }
+
+/* ==== FIX robusto para DropdownField (UI Toolkit) ==== */
+.unity-base-popup-field,
+.unity-popup-field {
+  border: none;
+  width: 100%;
+  background-color: transparent;
+}
+
+.unity-base-popup-field__input,
+.unity-popup-field__input {
+  background-color: #0B0E14;
+  color: #ECECEC;
+  height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #2A2F3A;
+  border-radius: 6px;
+  outline: none;
+}
+
+.unity-base-popup-field__text,
+.unity-popup-field__text { color: #ECECEC; }
+
+.unity-base-popup-field__arrow,
+.unity-popup-field__arrow { border-left: none; }
+
+.unity-base-popup-field__input:hover,
+.unity-popup-field__input:hover { border-color: #3A4150; }
+
+.unity-base-popup-field__input:focus,
+.unity-popup-field__input:focus { border-color: #46C7FA; }
+
+.unity-base-popup-field__popup,
+.unity-popup-field__popup {
+  background-color: #1A1E27;
+  border: 1px solid #2A2F3A;
+  z-index: 10000;
+}
+
+.unity-base-popup-field__popup--hidden,
+.unity-popup-field__popup--hidden {
+  display: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Permite que el popup salga del cuadro del diálogo sin ser recortado */
+.dialog { overflow: visible; }
+
+/* Hover / focus de ítems */
+.unity-base-popup-field__menu .unity-list-view__item:hover,
+.unity-popup-field__menu .unity-list-view__item:hover { background-color: #2A2F3A; }
+.unity-base-popup-field__menu .unity-list-view__item:focus,
+.unity-popup-field__menu .unity-list-view__item:focus { background-color: #303540; }
+
+/* === AÑADIDO: asegura color del TEXTO de los ítems === */
+.unity-base-popup-field__menu .unity-list-view__item,
+.unity-popup-field__menu .unity-list-view__item,
+.unity-base-popup-field__menu .unity-label,
+.unity-popup-field__menu .unity-label {
+  color: #ECECEC;
+}
+
